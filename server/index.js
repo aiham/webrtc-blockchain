@@ -4,7 +4,7 @@ const express = require('express');
 const https = require('https');
 const helmet = require('helmet');
 const cors = require('cors');
-const socketIO = require('socket.io');
+const SocketIO = require('socket.io');
 
 const port = process.env.PORT || 8080;
 const host = process.env.HOST || undefined;
@@ -19,7 +19,8 @@ const server = https.createServer({
   cert: fs.readFileSync(path.join(__dirname, 'ssl', 'server.crt'), 'utf8'),
 }, app);
 
-const io = socketIO(server, { serveClient: false });
+const io = SocketIO(server, { serveClient: false });
+
 io.on('connection', socket => {
   socket.on('signal', data => {
     socket.broadcast.emit('signal', data);
