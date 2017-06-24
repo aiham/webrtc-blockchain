@@ -193,4 +193,8 @@ const send = (to, data) => {
   }
 };
 
-export default { init, listen, send, getId: Socket.getId };
+const broadcast = data => {
+  Object.keys(dataChannels).forEach(to => send(to, data));
+};
+
+export default { init, listen, send, broadcast, getId: Socket.getId };
