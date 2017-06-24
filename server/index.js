@@ -5,6 +5,7 @@ const https = require('https');
 const helmet = require('helmet');
 const cors = require('cors');
 const SocketIO = require('socket.io');
+const uuid = require('uuid');
 
 const port = process.env.PORT || 8080;
 const host = process.env.HOST || undefined;
@@ -22,6 +23,9 @@ const server = https.createServer({
 const io = SocketIO(server, { serveClient: false });
 
 io.on('connection', socket => {
+  const id = uuid();
+  socket.emit('id', id);
+
   socket.on('signal', data => {
     socket.broadcast.emit('signal', data);
   });
