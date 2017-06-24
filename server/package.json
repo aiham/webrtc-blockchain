@@ -1,0 +1,16 @@
+{
+  "name": "webrtc-blockchain-server",
+  "license": "MIT",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.3",
+    "express": "^4.15.3",
+    "helmet": "^3.6.1",
+    "socket.io": "^2.0.3"
+  }
+}
