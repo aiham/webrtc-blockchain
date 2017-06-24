@@ -3,8 +3,8 @@ import ReactDOM from 'react-dom';
 import App from './App';
 import registerServiceWorker from './registerServiceWorker';
 import './index.css';
-import Socket from './Socket.js';
+import RTC from './RTC.js';
 
-Socket.init();
+RTC.init();
 ReactDOM.render(<App />, document.getElementById('root'));
 registerServiceWorker();
