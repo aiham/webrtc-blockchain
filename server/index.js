@@ -26,8 +26,14 @@ io.on('connection', socket => {
   const id = uuid();
   socket.emit('id', id);
 
+  socket.broadcast.emit('signal', { from: id, type: 'join' });
+
   socket.on('signal', data => {
-    socket.broadcast.emit('signal', data);
+    socket.broadcast.emit('signal', Object.assign(data, { from: id }));
+  });
+
+  socket.on('disconnect', () => {
+    socket.broadcast.emit('signal', { from: id, type: 'leave' });
   });
 });
 
