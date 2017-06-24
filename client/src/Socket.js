@@ -41,4 +41,12 @@ const listen = callback => {
 
 const getId = () => id;
 
-export default { init, signal, listen, getId };
+const onReady = callback => {
+  if (id) {
+    callback(id);
+  } else {
+    socket.on('id', callback);
+  }
+};
+
+export default { init, signal, listen, getId, onReady };
