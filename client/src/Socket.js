@@ -2,10 +2,13 @@ import io from 'socket.io-client';
 
 const url = 'https://localhost:8080/';
 let socket;
+let id;
 
 const init = () => {
   console.log(`Connecting to ${url}`);
   socket = io.connect(url);
+
+  socket.on('id', _id => (id = _id));
 
   [
     'connect',
@@ -36,4 +39,6 @@ const listen = callback => {
   };
 };
 
-export default { init, signal, listen };
+const getId = () => id;
+
+export default { init, signal, listen, getId };
