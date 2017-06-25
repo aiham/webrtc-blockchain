@@ -1,15 +1,21 @@
 import React, { Component } from 'react';
 import './App.css';
 import RTC from './RTC.js';
+import Wallet from './Wallet.js';
 
 class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      walletId: '',
       peers: [],
       messages: [],
     };
     this.cancelListen = RTC.listen(this.onRTC);
+  }
+
+  componentDidMount() {
+    Wallet.getId().then(walletId => this.setState({ walletId }));
   }
 
   onRTC = ({ type, peers, message }) => {
@@ -46,7 +52,8 @@ class App extends Component {
     return (
       <div className="App">
         <div className="App-header">
-          <h2>ID: {RTC.getId()}</h2>
+          <h2>Peer ID: {RTC.getId()}</h2>
+          <h2>Wallet ID: {this.state.walletId}</h2>
         </div>
         <h3>Peers</h3>
         {this.state.peers.map(peerId => (
