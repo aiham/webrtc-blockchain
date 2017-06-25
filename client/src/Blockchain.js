@@ -85,8 +85,42 @@ const init = () => {
   });
 };
 
-const addTransaction = transaction => {
-  RTC.broadcast({ type: 'transaction', transaction });
-};
+const addTransaction = ({ to, value, fee }) => (
+  Promise.all([
+    Wallet.getId(),
+    Wallet.getKeys(),
+  ])
+  .then(([ walletId, keys ]) => (
+    CryptoHelper.export(keys.publicKey)
+      .then(publicKey => [ walletId, keys, publicKey ])
+  ))
+  .then(([ walletId, keys, publicKey ]) => {
+    const transaction = {
+      id: uuid(),
+      time: +new Date(),
+      from: walletId,
+      to,
+      value,
+      fee,
+    };
+    const encodedTransaction = new TextEncoder().encode(JSON.stringify(transaction));
+    return CryptoHelper.sign(keys.privateKey, encodedTransaction)
+      .then(BytesHex.bytesToHex)
+      .then(signature => {
+        RTC.broadcast({
+          type: 'transaction',
+          transaction: {
+            from: walletId,
+            transaction,
+            signature,
+          },
+          publicKey,
+        });
+      });
+  })
+  .catch(error => {
+    console.error('Failed to broadcast transaction', error);
+  })
+);
 
 export default { init, listen, addTransaction };
