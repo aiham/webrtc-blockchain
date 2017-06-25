@@ -1,6 +1,7 @@
 import Wallet from './Wallet.js';
 import RTC from './RTC.js';
 import Support from './Support.js';
+import Blocks from './Blocks.js';
 
 const walletIds = {};
 const peerIds = {};
@@ -73,8 +74,10 @@ const init = () => {
     throw new Error('Unsupported browser. This app requires crypto.subtle and localStorage');
   }
 
-  // Generate a new wallet or import from localStorage as soon as the page loads
-  Wallet.getId().then(() => {
+  return Promise.all([
+    Wallet.getId(),
+    Blocks.getBlocks(),
+  ]).then(() => {
     RTC.init();
     RTC.listen(onRTC);
   });
