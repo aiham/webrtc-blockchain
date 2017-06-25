@@ -66,14 +66,12 @@ const createPeerConnection = (to, withOffer) => {
   const pc = new RTCPeerConnection(pcConfig);
 
   const generateOffer = () => {
+    if (!dataChannels[to]) {
+      const channel = pc.createDataChannel('messages');
+      addDataChannel(to, channel);
+    }
     pc.createOffer()
       .then(description => handleLocalDescription(to, description))
-      .then(() => {
-        if (!dataChannels[to]) {
-          const channel = pc.createDataChannel('messages');
-          addDataChannel(to, channel);
-        }
-      })
       .catch(errorHandler);
   };
 
