@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import './App.css';
 import RTC from './RTC.js';
+import Blockchain from './Blockchain';
+import CreateTransaction from './CreateTransaction.js';
 import Wallet from './Wallet.js';
 
 class App extends Component {
@@ -52,6 +54,10 @@ class App extends Component {
     RTC.send(id, { foo: 'bar' });
   }
 
+  onSubmitCreate = transaction => {
+    Blockchain.addTransaction(transaction);
+  }
+
   render() {
     return (
       <div className="App">
@@ -67,6 +73,8 @@ class App extends Component {
         {this.state.messages.map(message => (
           <div key={message.id}><pre>{JSON.stringify(message)}</pre></div>
         ))}
+        <h3>Create Transaction</h3>
+        <CreateTransaction onSubmit={this.onSubmitCreate} />
       </div>
     );
   }
