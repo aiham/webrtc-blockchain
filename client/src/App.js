@@ -32,6 +32,10 @@ class App extends Component {
         this.setState({ messages: this.state.messages.concat(message) });
         break;
 
+      case 'dataChannelOpen':
+      case 'dataChannelClose':
+        break;
+
       default:
         console.warn(`Unknown RTC event type ${type}`);
     }

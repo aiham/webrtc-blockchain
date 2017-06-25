@@ -38,12 +38,14 @@ const handleLocalDescription = (to, description) => {
 
 const addDataChannel = (id, channel) => {
   channel.onopen = event => {
+    trigger({ type: 'dataChannelOpen', id });
     console.log(`Data channel opened with ${id}`, event);
   };
   channel.onerror = event => {
     console.error(`Error on data channel with ${id}`, event);
   };
   channel.onclose = () => {
+    trigger({ type: 'dataChannelClose', id });
     console.log(`Data channel with ${id} closed`);
   };
   channel.onmessage = event => {
@@ -55,8 +57,10 @@ const addDataChannel = (id, channel) => {
       console.error('Failed to parse message data', event.data);
       return;
     }
-    const message = Object.assign(data, { id: uuid(), from: id, time: +new Date() });
-    trigger({ type: 'message', message });
+    trigger({
+      type: 'message',
+      message: { id: uuid(), time: +new Date(), from: id, data }
+    });
   };
   dataChannels[id] = channel;
 };
