@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
 import RTC from './RTC.js';
 
@@ -47,7 +46,6 @@ class App extends Component {
     return (
       <div className="App">
         <div className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
           <h2>ID: {RTC.getId()}</h2>
         </div>
         <h3>Peers</h3>
