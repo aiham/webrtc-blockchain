@@ -1,4 +1,5 @@
 import Socket from './Socket.js';
+import Support from './Support.js';
 import uuid from 'uuid';
 
 const peers = {};
@@ -148,6 +149,10 @@ const handleCandidate = (to, candidate) => {
 };
 
 const init = () => {
+  if (!Support.canRTC()) {
+    throw new Error('Unsupported browser. This app requires WebRTC');
+  }
+
   Socket.init();
   Socket.onReady(() => {
     Socket.listen(({ type, from, to, candidate, sdp }) => {

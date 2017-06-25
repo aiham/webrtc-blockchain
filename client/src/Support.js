@@ -12,4 +12,10 @@ const canStorage = () => {
   }
 };
 
-export default { canCrypto, canStorage };
+const canRTC = () => (
+  window.RTCPeerConnection &&
+  window.RTCSessionDescription &&
+  window.RTCIceCandidate
+);
+
+export default { canCrypto, canStorage, canRTC };
