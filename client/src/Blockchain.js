@@ -83,7 +83,11 @@ const onRTC = event => {
           break;
 
         case 'newBlock':
-          Miner.newBlock(data.block);
+          PublicKeys.getKey(data.block.minerId, data.publicKey)
+            .then(() => Miner.newBlock(data.block))
+            .catch(error => {
+              console.error('Failed to add new block', error);
+            });
           break;
 
         case 'walletIdRequest':
