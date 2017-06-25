@@ -76,7 +76,7 @@ const onRTC = event => {
       switch (data.type) {
         case 'transaction':
           PublicKeys.getKey(data.transaction.from, data.publicKey)
-            .then(publicKey => Miner.addTransaction(data.transaction, publicKey))
+            .then(() => Miner.addTransaction(data.transaction))
             .catch(error => {
               console.error('Failed to add transaction', error);
             });
@@ -134,7 +134,7 @@ const onMiner = event => {
       Wallet.getKeys()
         .then(keys => CryptoHelper.export(keys.publicKey))
         .then(publicKey => {
-          RTC.broadcast({ type: 'newBlock' block: event.block, publicKey });
+          RTC.broadcast({ type: 'newBlock', block: event.block, publicKey });
         });
       break;
 
