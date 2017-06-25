@@ -2,10 +2,16 @@ import Wallet from './Wallet.js';
 import RTC from './RTC.js';
 import Support from './Support.js';
 import Blocks from './Blocks.js';
+import Miner from './Miner.js';
+import CryptoHelper from './CryptoHelper.js';
+import PublicKeys from './PublicKeys.js';
+import BytesHex from './BytesHex.js';
+import uuid from 'uuid';
 
 const walletIds = {};
 const peerIds = {};
 const listeners = [];
+const publicKeys = {};
 
 const trigger = event => {
   listeners.forEach(listener => listener(event));
@@ -31,6 +37,7 @@ let awaitingBlocksFrom;
 let peersAwaitingBlocks = [];
 
 const onRTC = event => {
+  console.log('Blockchain.onRTC', event);
   switch (event.type) {
     case 'dataChannelOpen':
       RTC.send(event.id, { type: 'walletIdRequest' });
@@ -68,6 +75,15 @@ const onRTC = event => {
       const { from, data } = event.message;
       switch (data.type) {
         case 'transaction':
+          PublicKeys.getKey(data.transaction.from, data.publicKey)
+            .then(publicKey => Miner.addTransaction(data.transaction, publicKey))
+            .catch(error => {
+              console.error('Failed to add transaction', error);
+            });
+          break;
+
+        case 'newBlock':
+          Miner.newBlock(data.block);
           break;
 
         case 'walletIdRequest':
@@ -111,6 +127,22 @@ const onRTC = event => {
   }
 };
 
+const onMiner = event => {
+  console.log('Blockchain.onMiner', event);
+  switch (event.type) {
+    case 'newBlock':
+      Wallet.getKeys()
+        .then(keys => CryptoHelper.export(keys.publicKey))
+        .then(publicKey => {
+          RTC.broadcast({ type: 'newBlock' block: event.block, publicKey });
+        });
+      break;
+
+    default:
+      break;
+  }
+};
+
 const init = () => {
   if (!Support.canCrypto() || !Support.canStorage()) {
     throw new Error('Unsupported browser. This app requires crypto.subtle and localStorage');
@@ -122,6 +154,7 @@ const init = () => {
   ]).then(() => {
     RTC.init();
     RTC.listen(onRTC);
+    Miner.listen(onMiner);
   });
 };
 
