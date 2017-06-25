@@ -4,6 +4,25 @@ import Support from './Support.js';
 
 const walletIds = {};
 const peerIds = {};
+const listeners = [];
+
+const trigger = event => {
+  listeners.forEach(listener => listener(event));
+};
+
+const listen = callback => {
+  listeners.push(callback);
+  return () => {
+    listeners.splice(listeners.indexOf(callback), 1);
+  };
+};
+
+const getPeers = () => (
+  Object.keys(peerIds).map(peerId => ({
+    peerId,
+    walletId: peerIds[peerId],
+  }))
+);
 
 const onRTC = event => {
   switch (event.type) {
@@ -18,6 +37,7 @@ const onRTC = event => {
         .forEach(walletId => {
           delete walletIds[walletId];
         });
+      trigger({ type: 'peers', peers: getPeers() });
       break;
 
     case 'message':
@@ -35,6 +55,7 @@ const onRTC = event => {
         case 'walletIdResponse':
           peerIds[from] = data.walletId;
           walletIds[data.walletId] = from;
+          trigger({ type: 'peers', peers: getPeers() });
           break;
 
         default:
@@ -63,4 +84,4 @@ const addTransaction = transaction => {
   RTC.broadcast({ type: 'transaction', transaction });
 };
 
-export default { init, addTransaction };
+export default { init, listen, addTransaction };

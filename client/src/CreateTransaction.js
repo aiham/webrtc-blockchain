@@ -38,7 +38,7 @@ class CreateTransaction extends Component {
       <form onSubmit={this.onSubmit}>
         <div>
           <label>
-            To <input type="text" value={this.state.to} onChange={this.onChangeTo} />
+            To Wallet ID <input type="text" value={this.state.to} onChange={this.onChangeTo} />
           </label>
         </div>
         <div>
