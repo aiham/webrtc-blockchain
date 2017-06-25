@@ -130,6 +130,27 @@ const addTransaction = (transaction) => {
 };
 
 const newBlock = block => {
+  const { proof } = block;
+
+  const unprovenBlock = Object.assign({}, block);
+  delete unprovenBlock.proof;
+
+  const encodedBlock = new TextEncoder().encode(JSON.stringify(unprovenBlock));
+  return CryptoHelper.hash(encodedBlock)
+    .then(BytesHex.bytesToHex)
+    .then(hash => {
+      if (hash !== proof) {
+        throw new Error(`Received block has proof ${proof} that doesn't match hash ${hash}`);
+      }
+
+      if (proof.substr(0, 4) !== '0000') {
+        throw new Error(`Received block has invalid proof ${proof}`);
+      }
+
+      // TODO - More verification of block
+
+      // TODO - Add it to the chain
+    });
 };
 
 export default { addTransaction, newBlock, listen };
