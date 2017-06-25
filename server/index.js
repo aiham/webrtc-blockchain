@@ -22,18 +22,30 @@ const server = https.createServer({
 
 const io = SocketIO(server, { serveClient: false });
 
+const walletIds = {};
+
 io.on('connection', socket => {
-  const id = uuid();
-  socket.emit('id', id);
+  socket.on('walletId', walletId => {
+    if (walletIds[walletId]) {
+      socket.emit('duplicateWalletId');
+      return;
+    }
 
-  socket.broadcast.emit('signal', { from: id, type: 'join' });
+    const id = uuid();
+    walletIds[walletId] = id;
 
-  socket.on('signal', data => {
-    socket.broadcast.emit('signal', Object.assign(data, { from: id }));
-  });
+    socket.emit('id', id);
 
-  socket.on('disconnect', () => {
-    socket.broadcast.emit('signal', { from: id, type: 'leave' });
+    socket.broadcast.emit('signal', { from: id, type: 'join' });
+
+    socket.on('signal', data => {
+      socket.broadcast.emit('signal', Object.assign(data, { from: id }));
+    });
+
+    socket.on('disconnect', () => {
+      delete walletIds[walletId];
+      socket.broadcast.emit('signal', { from: id, type: 'leave' });
+    });
   });
 });
 

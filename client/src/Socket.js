@@ -1,4 +1,5 @@
 import io from 'socket.io-client';
+import Wallet from './Wallet.js';
 
 const url = 'https://localhost:8080/';
 let socket;
@@ -7,6 +8,18 @@ let id;
 const init = () => {
   console.log(`Connecting to ${url}`);
   socket = io.connect(url);
+
+  socket.once('connect', () => (
+    Wallet.getId()
+      .then(walletId => socket.emit('walletId', walletId))
+  ));
+
+  socket.on('duplicateWalletId', () => {
+    Wallet.getId().then(walletId => {
+      console.error('Cannot connect multiple peers with same wallet ID', walletId);
+      socket.close();
+    });
+  });
 
   socket.on('id', _id => (id = _id));
 
