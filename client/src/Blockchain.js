@@ -27,10 +27,19 @@ const getPeers = () => (
   }))
 );
 
+let awaitingBlocksFrom;
+let peersAwaitingBlocks = [];
+
 const onRTC = event => {
   switch (event.type) {
     case 'dataChannelOpen':
       RTC.send(event.id, { type: 'walletIdRequest' });
+      Blocks.getBlocks().then(blocks => {
+        if (blocks === null && !awaitingBlocksFrom && !peersAwaitingBlocks.includes(event.id)) {
+          awaitingBlocksFrom = event.id;
+          RTC.send(event.id, { type: 'blocksRequest' });
+        }
+      });
       break;
 
     case 'dataChannelClose':
@@ -40,6 +49,18 @@ const onRTC = event => {
         .forEach(walletId => {
           delete walletIds[walletId];
         });
+      if (event.id === awaitingBlocksFrom) {
+        const peerId = Object.keys(peerIds).find(id => !peersAwaitingBlocks.includes(id));
+        if (peerId === undefined) {
+          awaitingBlocksFrom = undefined;
+        } else {
+          awaitingBlocksFrom = peerId;
+          RTC.send(peerId, { type: 'blocksRequest' });
+        }
+      }
+      if (peersAwaitingBlocks.includes(event.id)) {
+        peersAwaitingBlocks.splice(peersAwaitingBlocks.indexOf(event.id), 1);
+      }
       trigger({ type: 'peers', peers: getPeers() });
       break;
 
@@ -59,6 +80,25 @@ const onRTC = event => {
           peerIds[from] = data.walletId;
           walletIds[data.walletId] = from;
           trigger({ type: 'peers', peers: getPeers() });
+          break;
+
+        case 'blocksRequest':
+          Blocks.getBlocks().then(blocks => {
+            if (blocks === null) {
+              peersAwaitingBlocks.push(from);
+            } else {
+              RTC.send(from, { type: 'blocksResponse', blocks });
+            }
+          });
+          break;
+
+        case 'blocksResponse':
+          awaitingBlocksFrom = undefined;
+          peersAwaitingBlocks.forEach(peerId => {
+            RTC.send(peerId, { type: 'blocksResponse', blocks: data.blocks });
+          });
+          peersAwaitingBlocks.splice(0, peersAwaitingBlocks.length);
+          Blocks.setBlocks(data.blocks);
           break;
 
         default:

@@ -16,4 +16,9 @@ const getBlocks = () => {
   return Promise.resolve(blocks);
 };
 
-export default { getBlocks };
+const setBlocks = blocksParam => {
+  blocks = blocksParam;
+  window.localStorage.blocks = JSON.stringify(blocks);
+};
+
+export default { getBlocks, setBlocks };
