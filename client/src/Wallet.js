@@ -33,28 +33,25 @@ const createWallet = () => {
     });
 };
 
+const getWallet = () => {
+  if (window.localStorage.wallet) {
+    return extractWallet();
+  }
+  return createWallet();
+};
+
 const getKeys = () => {
   if (keys) {
     return Promise.resolve(keys);
   }
-
-  if (window.localStorage.wallet) {
-    return extractWallet().then(() => keys);
-  }
-
-  return createWallet().then(() => keys);
+  return getWallet().then(() => keys);
 };
 
 const getId = () => {
   if (id) {
     return Promise.resolve(id);
   }
-
-  if (window.localStorage.wallet) {
-    return extractWallet().then(() => id);
-  }
-
-  return createWallet().then(() => id);
+  return getWallet().then(() => id);
 };
 
 export default { getKeys, getId };
