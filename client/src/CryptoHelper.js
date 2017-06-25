@@ -38,6 +38,9 @@ const CryptoHelper = {
     name: 'RSA-PSS',
     hash: { name: 'SHA-256' },
   }, true, [isPrivate ? 'sign' : 'verify']),
+
+  hash: data => window.crypto.subtle.digest({ name: 'SHA-256' }, data)
+    .then(hash => new Uint8Array(hash)),
 };
 
 export default CryptoHelper;
