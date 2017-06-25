@@ -14,7 +14,9 @@ const trigger = event => {
 const listen = callback => {
   listeners.push(callback);
   return () => {
-    listeners.splice(listeners.indexOf(callback), 1);
+    if (listeners.includes(callback)) {
+      listeners.splice(listeners.indexOf(callback), 1);
+    }
   };
 };
 
