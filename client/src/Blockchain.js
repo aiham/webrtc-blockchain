@@ -11,7 +11,6 @@ import uuid from 'uuid';
 const walletIds = {};
 const peerIds = {};
 const listeners = [];
-const publicKeys = {};
 
 const trigger = event => {
   listeners.forEach(listener => listener(event));
