@@ -27,6 +27,8 @@ const listen = (type, listener) => {
 
 const onRequest = listener => listen('request', listener);
 const onInfo = listener => listen('info', listener);
+const onConnected = listener => listen('connected', listener);
+const onDisconnected = listener => listen('disconnected', listener);
 
 const addPeer = id => {
   peers[id] = {
@@ -75,10 +77,12 @@ const onRTCEvent = event => {
   switch (event.type) {
     case 'dataChannelOpen':
       addPeer(event.id);
+      trigger('connected', event.id, Object.keys(peers));
       break;
 
     case 'dataChannelClose':
       removePeer(event.id);
+      trigger('disconnected', event.id, Object.keys(peers));
       break;
 
     case 'message':
@@ -198,4 +202,14 @@ const broadcastInfo = info => {
   RTC.broadcast({ type: 'info', info });
 };
 
-export default { init, sendRequest, sendInfo, broadcastRequest, broadcastInfo, onRequest, onInfo };
+export default {
+  init,
+  sendRequest,
+  sendInfo,
+  broadcastRequest,
+  broadcastInfo,
+  onRequest,
+  onInfo,
+  onConnected,
+  onDisconnected,
+};
