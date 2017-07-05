@@ -32,7 +32,7 @@ const getPeers = () => (
   }))
 );
 
-const onMiner = event => {
+const onMinerEvent = event => {
   console.log('Blockchain.onMiner', event);
   switch (event.type) {
     case 'newBlock':
@@ -191,7 +191,7 @@ const init = () => {
     Peers.onDisconnected(onPeerDisconnected);
     Peers.onRequest(onPeerRequest);
     Peers.onInfo(onPeerInfo);
-    Miner.listen(onMiner);
+    Miner.listen(onMinerEvent);
   });
 };
 
