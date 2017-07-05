@@ -10,6 +10,9 @@ const backlog = [];
 const MINIMUM_FEES = 5;
 const listeners = [];
 
+const HASH_PREFIX_COUNT = 4;
+const HASH_PREFIX = '0'.repeat(HASH_PREFIX_COUNT);
+
 const trigger = event => {
   listeners.forEach(listener => listener(event));
 };
@@ -78,7 +81,7 @@ const addProof = block => {
   return CryptoHelper.hash(encodedBlock)
     .then(BytesHex.bytesToHex)
     .then(hash => {
-      if (hash.substr(0, 4) === '0000') {
+      if (hash.substr(0, HASH_PREFIX_COUNT) === HASH_PREFIX) {
         block.proof = hash;
         return block;
       }
@@ -143,7 +146,7 @@ const newBlock = block => {
         throw new Error(`Received block has proof ${proof} that doesn't match hash ${hash}`);
       }
 
-      if (proof.substr(0, 4) !== '0000') {
+      if (proof.substr(0, HASH_PREFIX_COUNT) !== HASH_PREFIX) {
         throw new Error(`Received block has invalid proof ${proof}`);
       }
 
