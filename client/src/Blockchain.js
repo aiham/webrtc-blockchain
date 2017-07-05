@@ -52,12 +52,64 @@ const onMiner = event => {
   }
 };
 
+let chainPromise;
+const getMostCommonChain = () => {
+  chainPromise = Peers.broadcastRequest({ type: 'chain' })
+    .then(results => {
+      chainPromise = null;
+      const resultValues = Object.keys(results).map(peerId => results[peerId]);
+      const headCounts = resultValues.filter(chain => chain && chain.head)
+        .reduce((counts, ({ head })) => {
+          if (!counts[head]) {
+            counts[head] = 0;
+          }
+          counts[head] += 1;
+          return counts;
+        }, {});
+      const head = Object.keys(headCounts)
+        .map(head => [headCounts[head], head])
+        .sort(([a], [b]) => a < b ? 1 : (a > b ? -1 : 0))
+        .map(([count, head]) => head)
+        .find(() => true);
+      if (head) {
+        const chain = resultValues.find(chain => chain && chain.head === head)
+        if (chain) {
+          Blocks.setChain(chain);
+        }
+      }
+    }, error => {
+      chainPromise = null;
+      console.error('Failed to collect chain from peers', error);
+    });
+};
+
+let chainTimer;
+const collectChainIfMissing = () => {
+  Blocks.getChain()
+    .then(({ head }) => {
+      if (chainTimer) {
+        clearTimeout(chainTimer);
+        chainTimer = null;
+      }
+      if (!head && !chainPromise) {
+        chainTimer = setTimeout(() => {
+          chainTimer = null;
+          if (!chainPromise) {
+            getMostCommonChain();
+          }
+        }, 5000);
+      }
+    });
+};
+
 const onPeerConnected = (id, ids) => {
   Peers.sendRequest(id, { type: 'walletId' })
     .then(({ walletId }) => {
       peerIds[id] = walletId;
       walletIds[walletId] = id;
       trigger({ type: 'peers', peers: getPeers() });
+
+      collectChainIfMissing();
     }, error => {
       console.error(`Failed to get walletId from peer ${id}`, error);
     });
