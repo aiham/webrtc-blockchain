@@ -6,6 +6,7 @@ import Miner from './Miner.js';
 import CryptoHelper from './CryptoHelper.js';
 import PublicKeys from './PublicKeys.js';
 import BytesHex from './BytesHex.js';
+import getMax from './getMax.js';
 import uuid from 'uuid';
 
 const walletIds = {};
@@ -66,11 +67,10 @@ const getMostCommonChain = () => {
           counts[head] += 1;
           return counts;
         }, {});
-      const head = Object.keys(headCounts)
-        .map(head => [headCounts[head], head])
-        .sort(([a], [b]) => a < b ? 1 : (a > b ? -1 : 0))
-        .map(([count, head]) => head)
-        .find(() => true);
+      const [, head] = getMax(
+        Object.keys(headCounts).map(head => [headCounts[head], head]),
+        ([count]) => count
+      ) || [];
       if (head) {
         const chain = resultValues.find(chain => chain && chain.head === head)
         if (chain) {
