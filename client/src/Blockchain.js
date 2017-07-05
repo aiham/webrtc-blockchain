@@ -1,5 +1,5 @@
 import Wallet from './Wallet.js';
-import RTC from './RTC.js';
+import Peers from './Peers.js';
 import Support from './Support.js';
 import Blocks from './Blocks.js';
 import Miner from './Miner.js';
@@ -32,104 +32,6 @@ const getPeers = () => (
   }))
 );
 
-let awaitingBlocksFrom;
-let peersAwaitingBlocks = [];
-
-const onRTC = event => {
-  console.log('Blockchain.onRTC', event);
-  switch (event.type) {
-    case 'dataChannelOpen':
-      RTC.send(event.id, { type: 'walletIdRequest' });
-      Blocks.getBlocks().then(blocks => {
-        if (blocks === null && !awaitingBlocksFrom && !peersAwaitingBlocks.includes(event.id)) {
-          awaitingBlocksFrom = event.id;
-          RTC.send(event.id, { type: 'blocksRequest' });
-        }
-      });
-      break;
-
-    case 'dataChannelClose':
-      delete peerIds[event.id];
-      Object.keys(walletIds)
-        .filter(walletId => walletIds[walletId] === event.id)
-        .forEach(walletId => {
-          delete walletIds[walletId];
-        });
-      if (event.id === awaitingBlocksFrom) {
-        const peerId = Object.keys(peerIds).find(id => !peersAwaitingBlocks.includes(id));
-        if (peerId === undefined) {
-          awaitingBlocksFrom = undefined;
-        } else {
-          awaitingBlocksFrom = peerId;
-          RTC.send(peerId, { type: 'blocksRequest' });
-        }
-      }
-      if (peersAwaitingBlocks.includes(event.id)) {
-        peersAwaitingBlocks.splice(peersAwaitingBlocks.indexOf(event.id), 1);
-      }
-      trigger({ type: 'peers', peers: getPeers() });
-      break;
-
-    case 'message':
-      const { from, data } = event.message;
-      switch (data.type) {
-        case 'transaction':
-          PublicKeys.getKey(data.transaction.from, data.publicKey)
-            .then(() => Miner.addTransaction(data.transaction))
-            .catch(error => {
-              console.error('Failed to add transaction', error);
-            });
-          break;
-
-        case 'newBlock':
-          PublicKeys.getKey(data.block.minerId, data.publicKey)
-            .then(() => Miner.newBlock(data.block))
-            .catch(error => {
-              console.error('Failed to add new block', error);
-            });
-          break;
-
-        case 'walletIdRequest':
-          Wallet.getId().then(walletId => (
-            RTC.send(from, { type: 'walletIdResponse', walletId })
-          ));
-          break;
-
-        case 'walletIdResponse':
-          peerIds[from] = data.walletId;
-          walletIds[data.walletId] = from;
-          trigger({ type: 'peers', peers: getPeers() });
-          break;
-
-        case 'blocksRequest':
-          Blocks.getBlocks().then(blocks => {
-            if (blocks === null) {
-              peersAwaitingBlocks.push(from);
-            } else {
-              RTC.send(from, { type: 'blocksResponse', blocks });
-            }
-          });
-          break;
-
-        case 'blocksResponse':
-          awaitingBlocksFrom = undefined;
-          peersAwaitingBlocks.forEach(peerId => {
-            RTC.send(peerId, { type: 'blocksResponse', blocks: data.blocks });
-          });
-          peersAwaitingBlocks.splice(0, peersAwaitingBlocks.length);
-          Blocks.setBlocks(data.blocks);
-          break;
-
-        default:
-          break;
-      }
-      break;
-
-    default:
-      break;
-  }
-};
-
 const onMiner = event => {
   console.log('Blockchain.onMiner', event);
   switch (event.type) {
@@ -137,7 +39,84 @@ const onMiner = event => {
       Wallet.getKeys()
         .then(keys => CryptoHelper.export(keys.publicKey))
         .then(publicKey => {
-          RTC.broadcast({ type: 'newBlock', block: event.block, publicKey });
+          Peers.broadcastInfo({
+            type: 'newBlock',
+            block: event.block,
+            publicKey,
+          });
+        });
+      break;
+
+    default:
+      break;
+  }
+};
+
+const onPeerConnected = (id, ids) => {
+  Peers.sendRequest(id, { type: 'walletId' })
+    .then(({ walletId }) => {
+      peerIds[id] = walletId;
+      walletIds[walletId] = id;
+      trigger({ type: 'peers', peers: getPeers() });
+    }, error => {
+      console.error(`Failed to get walletId from peer ${id}`, error);
+    });
+};
+
+const onPeerDisconnected = (id, ids) => {
+  delete peerIds[id];
+  Object.keys(walletIds)
+    .filter(walletId => walletIds[walletId] === id)
+    .forEach(walletId => {
+      delete walletIds[walletId];
+    });
+  trigger({ type: 'peers', peers: getPeers() });
+};
+
+const onPeerRequest = ({ id, time, from, request }, respond) => {
+  switch (request.type) {
+    case 'walletId':
+      Wallet.getId().then(walletId => respond({ walletId }));
+      break;
+
+    case 'chainHead':
+      Blocks.getChain()
+        .then(({ head }) => {
+          respond({ head });
+        });
+      break;
+
+    case 'chain':
+      Blocks.getChain()
+        .then(chain => {
+          if (!chain.head) {
+            respond({ chain: null });
+          } else {
+            respond({ chain });
+          }
+        });
+      break;
+
+    default:
+      break;
+  }
+};
+
+const onPeerInfo = ({ id, time, from, info }) => {
+  switch (info.type) {
+    case 'transaction':
+      PublicKeys.getKey(info.transaction.from, info.publicKey)
+        .then(() => Miner.addTransaction(info.transaction))
+        .catch(error => {
+          console.error('Failed to add transaction', error);
+        });
+      break;
+
+    case 'newBlock':
+      PublicKeys.getKey(info.block.minerId, info.publicKey)
+        .then(() => Miner.newBlock(info.block))
+        .catch(error => {
+          console.error('Failed to add new block', error);
         });
       break;
 
@@ -153,10 +132,13 @@ const init = () => {
 
   return Promise.all([
     Wallet.getId(),
-    Blocks.getBlocks(),
+    Blocks.getChain(),
   ]).then(() => {
-    RTC.init();
-    RTC.listen(onRTC);
+    Peers.init();
+    Peers.onConnected(onPeerConnected);
+    Peers.onDisconnected(onPeerDisconnected);
+    Peers.onRequest(onPeerRequest);
+    Peers.onInfo(onPeerInfo);
     Miner.listen(onMiner);
   });
 };
@@ -183,7 +165,7 @@ const addTransaction = ({ to, value, fee }) => (
     return CryptoHelper.sign(keys.privateKey, encodedTransaction)
       .then(BytesHex.bytesToHex)
       .then(signature => {
-        RTC.broadcast({
+        Peers.broadcastInfo({
           type: 'transaction',
           transaction: {
             from: walletId,
