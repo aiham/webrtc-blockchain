@@ -1,24 +1,40 @@
-let blocks;
+let chain;
 
-const extractBlocks = () => {
-  console.log('Getting blocks from localStorage...');
-  return JSON.parse(window.localStorage.blocks);
+const extractChain = () => {
+  console.log('Getting chain from localStorage...');
+  return JSON.parse(window.localStorage.chain);
 };
 
-const getBlocks = () => {
-  if (blocks === undefined) {
-    if (window.localStorage.blocks) {
-      blocks = extractBlocks();
+const getChain = () => {
+  if (chain === undefined) {
+    if (window.localStorage.chain) {
+      chain = extractChain();
     } else {
-      blocks = null;
+      chain = {
+        head: null,
+        blocks: {},
+      };
     }
   }
-  return Promise.resolve(blocks);
+  return Promise.resolve(chain);
 };
 
-const setBlocks = blocksParam => {
-  blocks = blocksParam;
-  window.localStorage.blocks = JSON.stringify(blocks);
+const getIds = targetId => getChain().then(({ head, blocks }) => {
+  const ids = [];
+  let current = head;
+  while (current && blocks[current]) {
+    ids.push(current);
+    if (targetId && current === targetId) {
+      break;
+    }
+    current = blocks[current].previousId;
+  }
+  return ids;
+});
+
+const setChain = ({ head, blocks }) => {
+  chain = { head, blocks };
+  window.localStorage.chain = JSON.stringify(chain);
 };
 
-export default { getBlocks, setBlocks };
+export default { getChain, getIds, setChain };
