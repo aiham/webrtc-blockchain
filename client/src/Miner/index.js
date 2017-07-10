@@ -75,9 +75,6 @@ const listen = callback => {
   };
 };
 
-let isWorking = false;
-let shouldStopWorking = false;
-
 const totalFees = transactions => (
   transactions.reduce((loot, { transaction }) => loot + transaction.fee, 0)
 );
@@ -112,7 +109,7 @@ const createBlock = (transactions, previousId) => Promise.all([
     }));
 });
 
-const addProof = block => {
+const addProof = (block, shouldStop) => {
   if (!block.nonce) {
     block.nonce = 0;
   }
@@ -121,19 +118,56 @@ const addProof = block => {
   return CryptoHelper.hash(encodedBlock)
     .then(BytesHex.bytesToHex)
     .then(hash => {
-      if (shouldStopWorking) {
-        return Promise.reject(new Error('Stopped adding proof because of a new block'));
+      if (shouldStop()) {
+        return Promise.reject(new Error('addProof stopped'));
       }
       if (hash.substr(0, HASH_PREFIX_COUNT) === HASH_PREFIX) {
         block.proof = hash;
         return block;
       }
-      return addProof(block);
+      return addProof(block, shouldStop);
     });
 };
 
+const maybeCreateBlock = shouldStop => (
+  validateTransactions(pendingTransactions)
+    .then(results => {
+      if (!results.every(x => x)) {
+        results.map((x, i) => [ pendingTransactions[i], x ])
+          .filter(x => !x)
+          .forEach(([ transaction ]) => {
+            pendingTransactions.splice(pendingTransactions.indexOf(transaction), 1);
+          });
+        return;
+      }
+
+      if (shouldStop()) {
+        return Promise.reject(new Error('maybeCreateBlock stopped'));
+      }
+
+      return Blocks.getChain()
+        .then(({ head }) => createBlock(pendingTransactions, head))
+        .then(block => addProof(block, shouldStop))
+        .then(block => {
+          if (shouldStop()) {
+            return Promise.reject(new Error('maybeCreateBlock stopped'));
+          }
+          pendingTransactions.splice(0, pendingTransactions.length);
+          return block;
+        });
+    })
+    .catch(error => {
+      console.error('Failed to create block', error);
+    })
+);
+
+const moveBacklogToPending = () => {
+  pendingTransactions.push(...backlog);
+  backlog.splice(0, backlog.length);
+};
+
 const addTransaction = (transaction) => {
-  if (isWorking) {
+  if (hasTaskOfType('createBlock')) {
     backlog.push(transaction);
     return;
   }
@@ -144,39 +178,12 @@ const addTransaction = (transaction) => {
     return;
   }
 
-  isWorking = true;
-  validateTransactions(pendingTransactions)
-    .then(results => {
-      if (!results.every(x => x)) {
-        results.map((x, i) => [ pendingTransactions[i], x ])
-          .filter(x => !x)
-          .forEach(([ transaction ]) => {
-            pendingTransactions.splice(pendingTransactions.indexOf(transaction), 1);
-          });
-        pendingTransactions.push(...backlog);
-        backlog.splice(0, backlog.length);
-        return;
-      }
-
-      return Blocks.getChain()
-        .then(({ head }) => createBlock(pendingTransactions, head))
-        .then(addProof)
-        .then(block => {
-          if (shouldStopWorking) {
-            return Promise.reject(new Error('Stopped creating block because of a new block'));
-          }
-          pendingTransactions.splice(0, pendingTransactions.length);
-          pendingTransactions.push(...backlog);
-          backlog.splice(0, backlog.length);
-          trigger({ type: 'newBlock', block });
-        });
-    })
-    .catch(error => {
-      console.error('Failed to create block', error);
-    })
-    .then(() => {
-      isWorking = false;
-      shouldStopWorking = false;
+  addTask('createBlock', maybeCreateBlock).promise
+    .then(block => {
+      moveBacklogToPending();
+      trigger({ type: 'newBlock', block });
+    }, err => {
+      moveBacklogToPending();
     });
 };
 
