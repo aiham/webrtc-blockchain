@@ -132,7 +132,7 @@ const addTransaction = (transaction) => {
     });
 };
 
-const newBlock = block => {
+const validateBlock = block => {
   const { proof } = block;
 
   const unprovenBlock = Object.assign({}, block);
@@ -152,7 +152,15 @@ const newBlock = block => {
 
       // TODO - More verification of block
 
-      // TODO - Add it to the chain
+      return true;
+    });
+};
+
+const newBlock = block => {
+  return validateBlock(block)
+    .then(() => {
+      // TODO - add it (and any missing ancestors) to our chain
+      // TODO - discard any transactions already in the chain
     });
 };
 
