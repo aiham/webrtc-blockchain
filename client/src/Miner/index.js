@@ -1,9 +1,9 @@
-import Blocks from './Blocks.js';
-import Wallet from './Wallet.js';
+import Blocks from '../Blocks.js';
+import Wallet from '../Wallet.js';
 import uuid from 'uuid';
-import CryptoHelper from './CryptoHelper.js';
-import PublicKeys from './PublicKeys.js';
-import BytesHex from './BytesHex.js';
+import CryptoHelper from '../CryptoHelper.js';
+import PublicKeys from '../PublicKeys.js';
+import BytesHex from '../BytesHex.js';
 
 const pendingTransactions = [];
 const backlog = [];

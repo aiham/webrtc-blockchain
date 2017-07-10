@@ -2,7 +2,7 @@ import Wallet from './Wallet.js';
 import Peers from './Peers.js';
 import Support from './Support.js';
 import Blocks from './Blocks.js';
-import Miner from './Miner.js';
+import Miner from './Miner/index.js';
 import CryptoHelper from './CryptoHelper.js';
 import PublicKeys from './PublicKeys.js';
 import BytesHex from './BytesHex.js';
