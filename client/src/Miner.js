@@ -116,8 +116,8 @@ const addTransaction = (transaction) => {
         return;
       }
 
-      return Blocks.getBlocks()
-        .then(([ latestBlock ]) => createBlock(pendingTransactions, latestBlock.id))
+      return Blocks.getChain()
+        .then(({ head }) => createBlock(pendingTransactions, head))
         .then(addProof)
         .then(block => {
           pendingTransactions.splice(0, pendingTransactions.length);
