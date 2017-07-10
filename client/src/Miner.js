@@ -176,4 +176,39 @@ const newBlock = block => {
     });
 };
 
-export default { addTransaction, newBlock, listen };
+const validateChain = chain => {
+  const { head, blocks } = chain;
+  const remainingBlocks = Object.assign({}, blocks);
+  let current = head;
+  let promiseChain = Promise.resolve();
+
+  const appendPromiseChain = block => promiseChain.then(() => (
+    validateBlock(block)
+      .then(isValid => {
+        if (!isValid) {
+          return Promise.reject(new Error(`Invalid chain: invalid block ${block.id}`));
+        }
+        return true;
+      })
+  ));
+
+  while (current && current in remainingBlocks) {
+    promiseChain = appendPromiseChain(remainingBlocks[current]);
+    current = remainingBlocks[current].previousId;
+  }
+
+  promiseChain = promiseChain.then(() => {
+    const orphans = Object.keys(remainingBlocks);
+    if (orphans.length > 0) {
+      return Promise.reject(new Error(`Invalid chain: orphan blocks exist: ${orphans.join(', ')}`));
+    }
+    return true;
+  });
+
+  return promiseChain.catch(err => {
+    console.error('Chain validation failed', err);
+    return false;
+  });
+};
+
+export default { addTransaction, newBlock, listen, validateChain };
