@@ -58,6 +58,7 @@ const createBlock = (transactions, previousId) => Promise.all([
       minerId: walletId,
       transactions: transactions.concat({
         from: walletId,
+        isMinerFee: true,
         transaction,
         signature,
       }),
