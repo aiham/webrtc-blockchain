@@ -7,9 +7,9 @@ import BytesHex from './BytesHex.js';
 
 const pendingTransactions = [];
 const backlog = [];
-const MINIMUM_FEES = 5;
 const listeners = [];
 
+const MINIMUM_FEES = 5;
 const HASH_PREFIX_COUNT = 4;
 const HASH_PREFIX = '0'.repeat(HASH_PREFIX_COUNT);
 
