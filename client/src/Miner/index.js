@@ -134,14 +134,37 @@ const validateBlock = block => {
     .then(BytesHex.bytesToHex)
     .then(hash => {
       if (hash !== proof) {
-        throw new Error(`Received block has proof ${proof} that doesn't match its hash ${hash}`);
+        return Promise.reject(new Error(
+          `Received block has proof ${proof} that doesn't match its hash ${hash}`
+        ));
       }
 
       if (proof.substr(0, HASH_PREFIX_COUNT) !== HASH_PREFIX) {
-        throw new Error(`Received block has invalid proof ${proof}`);
+        return Promise.reject(new Error(`Received block has invalid proof ${proof}`));
       }
 
-      // TODO - More verification of block
+      if (!Array.isArray(block.transactions) || block.transactions.length < 2) {
+        return Promise.reject(new Error('Invalid list of transactions in received block'));
+      }
+
+      const transactions = block.transactions.slice();
+      const feeTransaction = transactions.pop();
+
+      if (feeTransaction.transaction.to !== block.minerId) {
+        return Promise.reject(new Error(
+          'Received block miner ID does not match fee transaction to ID'
+        ));
+      }
+
+      if (totalFees(transactions) !== feeTransaction.value) {
+        return Promise.reject(new Error('Received block transaction fees do not equal miners fees'));
+      }
+    })
+    .then(() => validateTransactions(block.transactions))
+    .then(results => {
+      if (!results.every(x => x)) {
+        return Promise.reject(new Error('Received block has invalid transactions'));
+      }
 
       return true;
     });
