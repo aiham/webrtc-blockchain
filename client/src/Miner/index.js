@@ -9,10 +9,58 @@ import validateTransactions from './validateTransactions.js';
 const pendingTransactions = [];
 const backlog = [];
 const listeners = [];
+const tasks = {};
 
 const MINIMUM_FEES = 5;
 const HASH_PREFIX_COUNT = 4;
 const HASH_PREFIX = '0'.repeat(HASH_PREFIX_COUNT);
+
+const addTask = (type, createPromise) => {
+  const task = {
+    id: uuid(),
+    type,
+    active: true,
+    abort: () => {
+      if (task.active) {
+        task.active = false;
+        delete tasks[task.id];
+      }
+    },
+  };
+  const complete = (arg, isError) => {
+    if (task.active) {
+      task.abort();
+      return isError ? Promise.reject(arg) : arg;
+    }
+    return Promise.reject(new Error('Task cancelled'));
+  };
+  task.promise = createPromise(() => !task.active).then(
+    result => complete(result),
+    err => complete(err, true)
+  );
+  tasks[task.id] = task;
+  return task;
+};
+
+const abortAllTasks = () => (
+  Object.keys(tasks).forEach(id => tasks[id].abort())
+);
+
+const abortAllOtherTasks = ignoreId => (
+  Object.keys(tasks)
+    .filter(id => id !== ignoreId)
+    .forEach(id => tasks[id].abort())
+);
+
+const abortTasksOfType = type => (
+  Object.keys(tasks)
+    .filter(id => tasks[id].type === type)
+    .forEach(id => tasks[id].abort())
+);
+
+const hasTaskOfType = type => (
+  Object.keys(tasks).some(id => tasks[id].type === type)
+);
 
 const trigger = event => {
   listeners.forEach(listener => listener(event));
