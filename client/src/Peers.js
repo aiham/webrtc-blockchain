@@ -179,6 +179,7 @@ const broadcastRequest = request => new Promise((resolve, reject) => {
       results[peerId] = result;
       resolveIfComplete();
     }, err => {
+      console.error(`Request to peer ${peerId} failed`, err);
       clear(promise);
       resolveIfComplete();
     });
