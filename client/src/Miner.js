@@ -27,6 +27,7 @@ const listen = callback => {
 };
 
 let isWorking = false;
+let shouldStopWorking = false;
 
 const totalFees = transactions => (
   transactions.reduce((loot, { transaction }) => loot + transaction.fee, 0)
@@ -81,6 +82,9 @@ const addProof = block => {
   return CryptoHelper.hash(encodedBlock)
     .then(BytesHex.bytesToHex)
     .then(hash => {
+      if (shouldStopWorking) {
+        return Promise.reject(new Error('Stopped adding proof because of a new block'));
+      }
       if (hash.substr(0, HASH_PREFIX_COUNT) === HASH_PREFIX) {
         block.proof = hash;
         return block;
@@ -112,7 +116,6 @@ const addTransaction = (transaction) => {
           });
         pendingTransactions.push(...backlog);
         backlog.splice(0, backlog.length);
-        isWorking = false;
         return;
       }
 
@@ -120,15 +123,21 @@ const addTransaction = (transaction) => {
         .then(({ head }) => createBlock(pendingTransactions, head))
         .then(addProof)
         .then(block => {
+          if (shouldStopWorking) {
+            return Promise.reject(new Error('Stopped creating block because of a new block'));
+          }
           pendingTransactions.splice(0, pendingTransactions.length);
           pendingTransactions.push(...backlog);
           backlog.splice(0, backlog.length);
-          isWorking = false;
           trigger({ type: 'newBlock', block });
         });
     })
     .catch(error => {
       console.error('Failed to create block', error);
+    })
+    .then(() => {
+      isWorking = false;
+      shouldStopWorking = false;
     });
 };
 
@@ -159,6 +168,9 @@ const validateBlock = block => {
 const newBlock = block => {
   return validateBlock(block)
     .then(() => {
+      if (isWorking) {
+        shouldStopWorking = true;
+      }
       // TODO - add it (and any missing ancestors) to our chain
       // TODO - discard any transactions already in the chain
     });
