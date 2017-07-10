@@ -53,13 +53,13 @@ const onMinerEvent = event => {
   }
 };
 
-let chainPromise;
-const getMostCommonChain = () => {
-  chainPromise = Peers.broadcastRequest({ type: 'chain' })
+const getMostCommonChain = () => (
+  Peers.broadcastRequest({ type: 'chain' })
     .then(results => {
-      chainPromise = null;
-      const resultValues = Object.keys(results).map(peerId => results[peerId]);
-      const headCounts = resultValues.filter(chain => chain && chain.head)
+      const resultValues = Object.keys(results)
+        .map(peerId => results[peerId]);
+      const headCounts = resultValues
+        .filter(chain => chain && chain.head)
         .reduce((counts, ({ head })) => {
           if (!counts[head]) {
             counts[head] = 0;
@@ -72,17 +72,12 @@ const getMostCommonChain = () => {
         ([count]) => count
       ) || [];
       if (head) {
-        const chain = resultValues.find(chain => chain && chain.head === head)
-        if (chain) {
-          Blocks.setChain(chain);
-        }
+        return resultValues.find(chain => chain && chain.head === head)
       }
-    }, error => {
-      chainPromise = null;
-      console.error('Failed to collect chain from peers', error);
-    });
-};
+    })
+);
 
+let chainPromise;
 let chainTimer;
 const collectChainIfMissing = () => {
   Blocks.getChain()
@@ -95,7 +90,16 @@ const collectChainIfMissing = () => {
         chainTimer = setTimeout(() => {
           chainTimer = null;
           if (!chainPromise) {
-            getMostCommonChain();
+            chainPromise = getMostCommonChain()
+              .then(chain => {
+                chainPromise = null;
+                if (chain) {
+                  Blocks.setChain(chain);
+                }
+              }, error => {
+                chainPromise = null;
+                console.error('Failed to collect chain from peers', error);
+              });
           }
         }, 5000);
       }
