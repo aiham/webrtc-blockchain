@@ -152,7 +152,7 @@ const validateBlock = block => {
     .then(BytesHex.bytesToHex)
     .then(hash => {
       if (hash !== proof) {
-        throw new Error(`Received block has proof ${proof} that doesn't match hash ${hash}`);
+        throw new Error(`Received block has proof ${proof} that doesn't match its hash ${hash}`);
       }
 
       if (proof.substr(0, HASH_PREFIX_COUNT) !== HASH_PREFIX) {
