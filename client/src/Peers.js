@@ -162,7 +162,7 @@ const broadcastRequest = request => new Promise((resolve, reject) => {
   const results = {};
   const promises = Object.keys(peers).map(peerId => {
     const clear = promise => {
-      promises.splice(promise.indexOf(promise), 1);
+      promises.splice(promises.indexOf(promise), 1);
     };
     const resolveIfComplete = () => {
       if (!promises.length) {
